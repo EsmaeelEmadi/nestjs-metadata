@@ -117,15 +117,15 @@ export class ScreensService extends MetadataBaseService<
     if (result instanceof HttpException) return result;
 
     const scopeMap = this.resolveScopeMap();
-    if (Object.keys(scopeMap).length === 0) return result; // no scope info, pass through
+    if (Object.keys(scopeMap).length === 0) return result;
 
-    result.data = result.data.filter((s) => {
-      const visPerms = (s as any).visibleToPermissions as Array<{
+    result.data = result.data.filter((s: any) => {
+      const visPerms = s.visibleToPermissions as Array<{
         resource: string;
         action: string;
         scope?: "own" | "tenant" | "all";
       }> | null;
-      if (!visPerms?.length) return true; // no restriction → visible to all
+      if (!visPerms?.length) return true;
       return visPerms.every((req) => {
         const userScopes: string[] = scopeMap[req.resource] ?? [];
         if (!req.scope) return userScopes.length > 0;
@@ -137,17 +137,8 @@ export class ScreensService extends MetadataBaseService<
   }
 
   private resolveScopeMap(): Record<string, string[]> {
-    return (
-      this.requestContext?.getScopeMap() ??
-      this.cls?.get("scopeMap") ??
-      (this.repo as any).getScopeContext?.()?.scopeMap ??
-      {}
-    );
+    return (this.repo as any).getScopeContext?.()?.scopeMap ?? {};
   }
-
-  // ──────────────────────────────────────────────────────────────────
-  // Render
-  // ──────────────────────────────────────────────────────────────────
 
   async render(
     screenId: string,
