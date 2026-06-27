@@ -104,7 +104,7 @@ export class TablesService extends MetadataBaseService<
     const scopeMap = options?.scopeMap ?? {};
 
     const table = await this.repo.selectOneById(tableId);
-    if (!table) return new NotFoundDto();
+    if (!table) return new NotFoundDto("TODO");
 
     const columnRows = await this.repo.findColumnsByTableId(
       tableId,

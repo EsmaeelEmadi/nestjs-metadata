@@ -145,7 +145,7 @@ export class ScreensService extends MetadataBaseService<
   ): Promise<Record<string, unknown> | HttpException> {
     // 1. Load screen
     const screen = await this.repo.selectOneById(screenId);
-    if (!screen) return new NotFoundDto();
+    if (!screen) return new NotFoundDto("TODO");
 
     // 1.5 Check permission-based visibility
     const visPerms = screen.visibleToPermissions as Array<{

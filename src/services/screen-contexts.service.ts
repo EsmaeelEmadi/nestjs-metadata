@@ -1,7 +1,10 @@
 import { NotFoundDto } from "@esmaeel_emadi/ts-exc";
 import { Inject, Injectable, Logger, Optional } from "@nestjs/common";
 import { eq } from "drizzle-orm";
-import { RequestContext, ITranslationService } from "@esmaeel_emadi/nestjs-core";
+import {
+  RequestContext,
+  ITranslationService,
+} from "@esmaeel_emadi/nestjs-core";
 import { MetadataBaseService } from "../common/metadata-base-service";
 import { TRANSLATION_SERVICE } from "../metadata.types";
 import { screenContexts } from "../schemas";
@@ -34,8 +37,10 @@ export class ScreenContextsService extends MetadataBaseService<
   protected override guardRecover(_id: string, _existing: any): undefined {}
 
   async findByScreenId(screenId: string) {
-    const ctx = await this.repo.selectOne(eq(screenContexts.screenId, screenId));
-    if (!ctx) return new NotFoundDto();
+    const ctx = await this.repo.selectOne(
+      eq(screenContexts.screenId, screenId),
+    );
+    if (!ctx) return new NotFoundDto([]);
     return ctx;
   }
 }
