@@ -1,12 +1,12 @@
 {
-  "name": "@esmaeel_emadi/nestjs-metadata",
+  "name": "@wrk-t/nestjs-metadata",
   "version": "0.1.0",
   "description": "Metadata-driven UI generation for NestJS — database-backed forms, tables, screens, and navigation modules with tenant overrides.",
   "license": "MIT",
   "author": "emadi68moh@gmail.com",
   "repository": {
     "type": "git",
-    "url": "https://github.com/EsmaeelEmadi/nestjs-metadata"
+    "url": "https://github.com/wrk-t/nestjs-metadata"
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
