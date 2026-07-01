@@ -1,25 +1,20 @@
 import { relations } from "drizzle-orm";
-import {
-  boolean,
-  integer,
-  json,
-  pgTable,
-  varchar,
-} from "drizzle-orm/pg-core";
+import { boolean, integer, json, pgTable, varchar } from "drizzle-orm/pg-core";
 import { ids } from "../../helpers/ids";
 import { timestamps } from "../../helpers/timestamps";
 import { archComponents } from "./components";
+import { archComponentBlueprints } from "./componentBlueprints";
 import { fieldDefinitions } from "../fieldDefinitions";
 import { uiComponents } from "../uiComponents";
 
 // ──────────────────────────────────────────────────────────────────
-// Param binding — how a component_ref element resolves a child's
-// input parameter from available context sources.
+// Param binding — resolves a child component's input from context
 // ──────────────────────────────────────────────────────────────────
 
 export interface IElementParamBinding {
   /** Where the value originates */
-  source: "literal" | "scope" | "route_param" | "query_param" | "parent_context";
+  source:
+    "literal" | "scope" | "route_param" | "query_param" | "parent_context";
   /** For literal: the hardcoded value. For others: the key to look up. */
   value?: string;
 }
@@ -36,20 +31,29 @@ export interface IElementGrid {
 }
 
 // ──────────────────────────────────────────────────────────────────
-// arch_component_elements — filled slots within a component instance
+// arch_component_elements — children within a component instance
 // ──────────────────────────────────────────────────────────────────
 //
-// Each row is one child of a component instance. The elementType
+// Each row fills one slot on a component instance. The elementType
 // determines what kind of child it is:
 //
-//   "field"          → form field / table column referencing a
-//                      field_definition and optionally a ui_component
-//   "section"        → grouping container; children point to it via
-//                      parentElementId
-//   "component_ref"  → references another component instance (a table
-//                      embedded in a page, a form opened from a table)
-//   "renderer"       → references a renderer-type blueprint (badge,
-//                      chart-cell, button, image — presentation only)
+//   "field"         → a form field or table column. References a
+//                     field_definition and optionally a ui_component.
+//
+//   "component_ref" → references another component instance to embed
+//                     it inside this component. For example:
+//                     - a "section" component inside a form
+//                     - a "table" component inside a page
+//                     - a "chart" component inside a dashboard
+//
+//   "renderer"      → references a component blueprint (not instance)
+//                     for leaf rendering: badge, button, chart-cell,
+//                     image. The rendererConfig carries instance-
+//                     specific params (color, field, etc.).
+//
+// Elements do NOT nest — if a section contains fields, those fields
+// are elements of the section component, not children of an element.
+// Composition is always component → elements, never element → elements.
 
 export const archComponentElements = pgTable("arch_component_elements", {
   ...ids,
@@ -61,46 +65,50 @@ export const archComponentElements = pgTable("arch_component_elements", {
     .references(() => archComponents.id, { onDelete: "cascade" }),
 
   // ── Which blueprint slot this element fills ──────────────────
-  // Matches a slot name declared in the blueprint's blueprintDef.slots.
-  // Null for simple components that don't declare slots.
-  slotName: varchar("slot_name", { length: 100 }),
+  // Must match a slot name declared in the component's blueprint.
+  // e.g. "columns", "body", "toolbar", "content"
+  slotName: varchar("slot_name", { length: 100 }).notNull(),
 
   // ── Element type ─────────────────────────────────────────────
   elementType: varchar("element_type", {
     length: 20,
-    enum: ["field", "section", "component_ref", "renderer"],
+    enum: ["field", "component_ref", "renderer"],
   }).notNull(),
 
   // ── For "field" type ─────────────────────────────────────────
-  fieldDefinitionId: varchar("field_definition_id", { length: 24 })
-    .references(() => fieldDefinitions.id, { onDelete: "set null" }),
+  fieldDefinitionId: varchar("field_definition_id", { length: 24 }).references(
+    () => fieldDefinitions.id,
+    { onDelete: "set null" },
+  ),
 
-  // UI component override for this field/column
-  uiComponentId: varchar("ui_component_id", { length: 24 })
-    .references(() => uiComponents.id, { onDelete: "set null" }),
+  // Optional UI component override for this field/column
+  uiComponentId: varchar("ui_component_id", { length: 24 }).references(
+    () => uiComponents.id,
+    { onDelete: "set null" },
+  ),
 
   // ── For "component_ref" type ─────────────────────────────────
-  // References another component instance (a table in a page,
-  // a form opened from a row action, a chart in a dashboard).
-  referencedComponentId: varchar("referenced_component_id", { length: 24 })
-    .references(() => archComponents.id, { onDelete: "cascade" }),
+  // References another component instance to embed.
+  // e.g. a page referencing a table, a form referencing a section.
+  referencedComponentId: varchar("referenced_component_id", {
+    length: 24,
+  }).references(() => archComponents.id, { onDelete: "cascade" }),
 
-  // Param bindings — how the parent resolves the child's inputs
+  // How the parent resolves the child's contract inputs.
+  // e.g. { "tableId": { source: "literal", value: "tbl_abc" } }
   paramBindings:
     json("param_bindings").$type<Record<string, IElementParamBinding>>(),
 
   // ── For "renderer" type ──────────────────────────────────────
-  // References a renderer-type blueprint (e.g. "badge", "chart-cell")
-  rendererComponentId: varchar("renderer_component_id", { length: 24 })
-    .references(() => archComponents.id, { onDelete: "cascade" }),
+  // References a component blueprint (not an instance) — e.g. "badge",
+  // "chart-cell", "action-button". These are leaf renderers with no
+  // slots or children of their own.
+  rendererBlueprintId: varchar("renderer_blueprint_id", {
+    length: 24,
+  }).references(() => archComponentBlueprints.id, { onDelete: "restrict" }),
 
-  // Renderer-specific configuration (e.g. badge color, chart type)
+  // Instance-specific renderer config (e.g. badge color, chart type)
   rendererConfig: json("renderer_config").$type<Record<string, unknown>>(),
-
-  // ── Nesting (for "section" type) ─────────────────────────────
-  // Elements that belong to a section point to the section row.
-  // Sections can nest: a section element can itself have a parentElementId.
-  parentElementId: varchar("parent_element_id", { length: 24 }),
 
   // ── Element-level overrides ──────────────────────────────────
   // Bounded by the blueprint's slot.overridable declaration.
@@ -126,43 +134,38 @@ export const archComponentElements = pgTable("arch_component_elements", {
 });
 
 // ──────────────────────────────────────────────────────────────────
-// Self-referential relation for section nesting
+// Relations
 // ──────────────────────────────────────────────────────────────────
 
 export const archComponentElementsRelations = relations(
   archComponentElements,
-  ({ one, many }) => ({
-    // Owner component instance
+  ({ one }) => ({
+    // Parent component instance
     component: one(archComponents, {
       fields: [archComponentElements.componentId],
       references: [archComponents.id],
     }),
-    // Referenced component (for component_ref elements)
+    // For "component_ref": the embedded component instance
     referencedComponent: one(archComponents, {
       fields: [archComponentElements.referencedComponentId],
       references: [archComponents.id],
       relationName: "referencedComponent",
     }),
-    // Referenced renderer (for renderer elements)
-    rendererComponent: one(archComponents, {
-      fields: [archComponentElements.rendererComponentId],
-      references: [archComponents.id],
-      relationName: "rendererComponent",
+    // For "renderer": the renderer blueprint
+    rendererBlueprint: one(archComponentBlueprints, {
+      fields: [archComponentElements.rendererBlueprintId],
+      references: [archComponentBlueprints.id],
+      relationName: "rendererBlueprint",
     }),
-    // Field definition
+    // For "field": the field definition
     fieldDefinition: one(fieldDefinitions, {
       fields: [archComponentElements.fieldDefinitionId],
       references: [fieldDefinitions.id],
     }),
-    // UI component
+    // For "field": optional UI component override
     uiComponent: one(uiComponents, {
       fields: [archComponentElements.uiComponentId],
       references: [uiComponents.id],
-    }),
-    // Parent element (section nesting)
-    parentElement: one(archComponentElements, {
-      fields: [archComponentElements.parentElementId],
-      references: [archComponentElements.id],
     }),
   }),
 );

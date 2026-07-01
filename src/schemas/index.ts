@@ -7,6 +7,8 @@ export type { ISimpleCondition, ICompoundCondition } from "../types/conditions";
 
 // ── Component architecture (v2) ────────────────────────────
 export {
+  archComponentBlueprints,
+  archComponentBlueprintsRelations,
   archComponents,
   archComponentsRelations,
   archComponentElements,
@@ -18,7 +20,6 @@ export type {
   IBlueprintSlot,
   IBlueprintContractParam,
   IBlueprintContractOutput,
-  IBlueprintDef,
   IPermissionVisibility,
   IElementParamBinding,
   IElementGrid,

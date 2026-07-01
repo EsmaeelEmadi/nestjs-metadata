@@ -1,8 +1,5 @@
 import { DynamicModule, Module } from "@nestjs/common";
-import {
-  RequestContext,
-  AccessControlService,
-} from "@wrk-t/nestjs-core";
+import { RequestContext, AccessControlService } from "@wrk-t/nestjs-core";
 import {
   METADATA_OPTIONS,
   TRANSLATION_SERVICE,
@@ -23,6 +20,7 @@ import { ScreenContextsService } from "./services/screen-contexts.service";
 import { WidgetContractsService } from "./services/widget-contracts.service";
 import { ModulesService } from "./services/modules.service";
 import { FeaturesService } from "./services/features.service";
+import { ComponentsService } from "./services/components.service";
 // ── Repositories ──
 import { FormsPgRepository } from "./repositories/forms.pg.repository";
 import { EntitiesPgRepository } from "./repositories/entities.pg.repository";
@@ -38,6 +36,7 @@ import { ScreenContextsPgRepository } from "./repositories/screen-contexts.pg.re
 import { WidgetContractsPgRepository } from "./repositories/widget-contracts.pg.repository";
 import { ModulesPgRepository } from "./repositories/modules.pg.repository";
 import { FeaturesPgRepository } from "./repositories/features.pg.repository";
+import { ComponentsPgRepository } from "./repositories/components.pg.repository";
 // ── Controller modules ──
 import { FormsModule } from "./modules/forms/forms.module";
 import { EntitiesModule } from "./modules/entities/entities.module";
@@ -53,6 +52,7 @@ import { ScreenContextsModule } from "./modules/screen-contexts/screen-contexts.
 import { WidgetContractsModule } from "./modules/widget-contracts/widget-contracts.module";
 import { ModulesModule } from "./modules/modules-navigation/modules.module";
 import { FeaturesModule } from "./modules/features/features.module";
+import { ComponentsModule } from "./modules/components/components.module";
 
 @Module({})
 export class MetadataModule {
@@ -84,6 +84,7 @@ export class MetadataModule {
       WidgetContractsService,
       ModulesService,
       FeaturesService,
+      ComponentsService,
       // ── Repositories ──
       FormsPgRepository,
       EntitiesPgRepository,
@@ -99,6 +100,7 @@ export class MetadataModule {
       WidgetContractsPgRepository,
       ModulesPgRepository,
       FeaturesPgRepository,
+      ComponentsPgRepository,
     ];
 
     if (features.accessControl) {
@@ -131,6 +133,7 @@ export class MetadataModule {
         WidgetContractsModule,
         ModulesModule,
         FeaturesModule,
+        ComponentsModule,
         ...(options.imports ?? []),
       ],
       providers,
@@ -150,6 +153,7 @@ export class MetadataModule {
         WidgetContractsService,
         ModulesService,
         FeaturesService,
+        ComponentsService,
         ...(features.accessControl ? [AccessControlService] : []),
       ],
     };

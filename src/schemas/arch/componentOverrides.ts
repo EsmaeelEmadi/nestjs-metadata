@@ -10,20 +10,17 @@ import { archComponentElements } from "./componentElements";
 // ──────────────────────────────────────────────────────────────────
 //
 // Each row overrides either a component instance or a specific
-// element within a component instance, scoped to a tenant.
+// element within a component instance, scoped to a single tenant.
 //
-//   - componentId + tenantId + elementId=null
-//     → component-level override (displayName, config, settings, etc.)
+//   componentId + elementId=null  → component-level override
+//     (displayName, config.settings, config.actions, …)
 //
-//   - componentId + tenantId + elementId=set
-//     → element-level override (column width, field visibility, etc.)
+//   componentId + elementId=set   → element-level override
+//     (width, visibility, isRequired, rendererConfig, …)
 //
-// The override paths must match the blueprint's overridable or
-// slot.overridable declarations. Validation happens in the service
-// layer, not as a DB constraint.
-//
-// Null/omitted keys mean "use the base value" — only explicitly
-// set keys in the overrides JSON are applied on top of the base.
+// The override keys must match paths declared in the blueprint's
+// overridable (component-level) or slot.overridable (element-level).
+// Validation happens at write time in the service layer.
 
 export const archComponentOverrides = pgTable(
   "arch_component_overrides",
@@ -36,17 +33,18 @@ export const archComponentOverrides = pgTable(
       .notNull()
       .references(() => archComponents.id, { onDelete: "cascade" }),
 
-    // Null → component-level override. Set → element-level override.
-    elementId: varchar("element_id", { length: 24 })
-      .references(() => archComponentElements.id, { onDelete: "cascade" }),
+    // Null → component-level. Set → element-level.
+    elementId: varchar("element_id", { length: 24 }).references(
+      () => archComponentElements.id,
+      { onDelete: "cascade" },
+    ),
 
     // ── Tenant ─────────────────────────────────────────────────
     tenantId: varchar("tenant_id", { length: 24 }).notNull(),
 
     // ── Override values ────────────────────────────────────────
-    // Only paths declared in the blueprint's overridable or
-    // slot.overridable are valid. Keys are dot-notation paths,
-    // e.g. { "displayName": "ACME Customers", "config.settings.density": "compact" }
+    // Dot-notation path → value. Only declared paths are valid.
+    // Example: { "displayName": "ACME Customers", "config.settings.density": "compact" }
     overrides: json("overrides").$type<Record<string, unknown>>().notNull(),
 
     // ── Metadata ───────────────────────────────────────────────
@@ -54,10 +52,8 @@ export const archComponentOverrides = pgTable(
   },
   (table) => ({
     // One override row per (component, optional-element, tenant).
-    // PostgreSQL treats NULLs as distinct in unique indexes, so
-    // this allows one component-level row (elementId = NULL) plus
-    // multiple element-level rows per tenant. The service layer
-    // enforces "only one component-level override per tenant."
+    // Service layer additionally enforces: only one row where elementId IS NULL
+    // per (componentId, tenantId) to prevent duplicate component-level overrides.
     uniqueOverride: uniqueIndex("uq_arch_override").on(
       table.componentId,
       table.elementId,

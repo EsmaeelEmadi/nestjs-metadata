@@ -1,16 +1,27 @@
 // ── Component architecture (v2) ──────────────────────────────
-// These tables coexist with the old forms/tables/screens system.
-// All tables use the "arch_" prefix to distinguish them while both
-// systems are live. Once the old system is migrated, the prefix
-// will be dropped.
+//
+// Four tables that replace forms/tables/screens/screen_widgets
+// with a unified component model:
+//
+//   arch_component_blueprints  — "class": slots, overridable, contract
+//   arch_components            — "instance": concrete config, elements
+//   arch_component_elements    — children filling blueprint slots
+//   arch_component_overrides   — tenant-level customisation
+//
+// These coexist with the old system (forms, tables, screens, etc.).
+// All tables use the "arch_" prefix while both systems are live.
+
+export {
+  archComponentBlueprints,
+  archComponentBlueprintsRelations,
+  type IBlueprintSlot,
+  type IBlueprintContractParam,
+  type IBlueprintContractOutput,
+} from "./componentBlueprints";
 
 export {
   archComponents,
   archComponentsRelations,
-  type IBlueprintSlot,
-  type IBlueprintContractParam,
-  type IBlueprintContractOutput,
-  type IBlueprintDef,
   type IPermissionVisibility,
 } from "./components";
 
